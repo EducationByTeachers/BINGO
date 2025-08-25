@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>BINGO</title>
+<style>
+body { font-family: Arial, sans-serif; text-align:center; background:#f0f0f0; margin:0; padding:0; }
+h1 { margin-top:20px; }
+table { margin:20px auto; border-collapse: collapse; }
+td { width:100px; height:60px; border:1px solid #999; text-align:center; vertical-align:middle; font-size:16px; cursor:pointer; background:white; transition: background 0.3s; }
+td.correct { background:green; color:white; font-weight:bold; }
+button { padding:10px 20px; font-size:16px; margin:10px; cursor:pointer; }
+#message { font-size:32px; color:red; margin:20px; display:none; }
+canvas#confetti { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999; display:none; }
+#called-number { font-size:24px; margin:10px; }
+</style>
+</head>
+<body>
+
+<h1>BINGO</h1>
+<p>Click "Call Number" and select the correct digit in the table!</p>
+<button id="call-btn">Call Number</button>
+<button id="restart-btn">Restart</button>
+<div id="called-number"></div>
+
+<table id="bingo-table"></table>
+<div id="message">¡YOU DID! GOOD JOB!</div>
+<canvas id="confetti"></canvas>
+
+<script>
+const numberWords=[
+"", "Uno","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez",
+"Once","Doce","Trece","Catorce","Quince",
+"Dieciseis","Diecisiete","Dieciocho","Diecinueve","Veinte",
+"Veintiuno","Veintidos","Veintitres","Veinticuatro","Veinticinco","Veintiseis","Veintisiete","Veintiocho","Veintinueve","Treinta",
+"Treinta y uno","Treinta y dos","Treinta y tres","Treinta y cuatro","Treinta y cinco","Treninta y seis","Treinta y siete","Treinta y ocho","Treinta y nueve",
+"Cuarenta","Cuarenta y uno","Cuarenta y dos","Cuarenta y tres","Cuarenta y cuatro","Cuarenta y cinco","Cuarenta y seis","Cuarenta y siete","Cuarenta y ocho","Cuarenta y nueve",
+"Cincuenta"
+];
+
+let bingoNumbers = [];
+let calledNumber = 0;
+let correctCount = 0;
+
+const table = document.getElementById("bingo-table");
+const calledNumberDiv = document.getElementById("called-number");
+const messageEl = document.getElementById("message");
+const confettiCanvas = document.getElementById("confetti");
+const ctx = confettiCanvas.getContext("2d");
+
+document.getElementById("call-btn").onclick = callNumber;
+document.getElementById("restart-btn").onclick = initGame;
+
+initGame();
+
+function initGame(){
+    bingoNumbers = shuffleArray([...Array(50).keys()].map(i=>i+1));
+    calledNumber = 0;
+    correctCount = 0;
+    table.innerHTML="";
+    messageEl.style.display="none";
+    calledNumberDiv.textContent="";
+    createTable();
+}
+
+function createTable(){
+    for(let r=0;r<10;r++){
+        const row = document.createElement("tr");
+        for(let c=0;c<5;c++){
+            const td = document.createElement("td");
+            const index = r*5+c;
+            if(index>=bingoNumbers.length) continue;
+            const num = bingoNumbers[index];
+            td.textContent = num;
+            td.dataset.num = num;
+            td.onclick = checkSelection;
+            row.appendChild(td);
+        }
+        table.appendChild(row);
+    }
+}
+
+function shuffleArray(array){
+    for(let i=array.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [array[i],array[j]]=[array[j],array[i]];
+    }
+    return array;
+}
+
+function callNumber(){
+    if(calledNumber >= 50) return;
+    do{
+        calledNumber = Math.floor(Math.random()*50)+1;
+    } while(document.querySelector(`td.correct[data-num='${calledNumber}']`));
+    calledNumberDiv.textContent = "Number announced: " + numberWords[calledNumber];
+}
+
+function checkSelection(){
+    if(!calledNumber) return;
+    if(parseInt(this.dataset.num) === calledNumber){
+        this.classList.add("correct");
+        correctCount++;
+        calledNumber = 0;
+        calledNumberDiv.textContent="";
+        if(correctCount >= 50){
+            finishGame();
+        }
+    } else {
+        alert("¡Intenta de nuevo!");
+    }
+}
+
+// Confeti
+let confettiRunning=false;
+function finishGame(){
+    messageEl.style.display="block";
+    startConfetti();
+}
+
+function startConfetti(){
+  if(confettiRunning) return;
+  confettiRunning=true;
+  confettiCanvas.style.display="block";
+  confettiCanvas.width=window.innerWidth;
+  confettiCanvas.height=window.innerHeight;
+  const pieces=Array.from({length:200},()=>({
+    x:Math.random()*confettiCanvas.width,
+    y:Math.random()*confettiCanvas.height,
+    r:3+Math.random()*4,
+    vx:-1+Math.random()*2,
+    vy:1+Math.random()*3,
+    color:["#ef4444","#22c55e","#3b82f6","#facc15","#a855f7"][Math.floor(Math.random()*5)]
+  }));
+  function draw(){
+    if(!confettiRunning) return;
+    ctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    pieces.forEach(p=>{
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.y>confettiCanvas.height) p.y=0;
+      if(p.x>confettiCanvas.width) p.x=0;
+      if(p.x<0) p.x=confettiCanvas.width;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+function stopConfetti(){ confettiRunning=false; confettiCanvas.style.display="none"; }
+
+</script>
+</body>
+</html>
